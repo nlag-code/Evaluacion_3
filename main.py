@@ -1,16 +1,62 @@
-# This is a sample Python script.
+import json
+import requests
+import conf
 
-# Press Mayús+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+sandbox = "https://10.10.20.14"
+cabecera = {
+    "Content-Type": "application/json"
+}
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+def obtener_token():
+    url = sandbox + "/api/aaaLogin.json"
+    body = {
+        "aaaUser": {
+            "attributes": {
+                "name": conf.usuario,
+                "pwd": conf.clave
+            }
+        }
+    }
+
+    requests.packages.urllib3.disable_warnings()
+    respuesta = requests.post(url, headers=cabecera, data=json.dumps(body), verify=False)
+    token = respuesta.json()['imdata'][0]['aaaLogin']['attributes']['token']
+
+    return token
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+galletin = {
+    "APIC-Cookie": obtener_token()
+}
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+
+def consulta_api():
+    respuesta = requests.get(sandbox + "/api/class/topSystem.json", headers=cabecera, cookies=galletin, verify=False)
+    return respuesta.json()
+
+
+def crear_tenant():
+    tenant_1 = {
+        "fvTenant": {
+            "attributes": {
+                "name": "TenantX"
+            }
+        }
+    }
+    tenant_1 = json.dumps(tenant_1, indent=4)
+    tenant = requests.post(sandbox + "/api/mo/uni.json", headers=cabecera, cookies=galletin, verify=False,
+                           data=tenant_1)
+    return tenant.status_code
+
+
+def interfaces():
+    interface = requests.get(sandbox + "/api/node/mo/topology/pod-1/node-101/sys/phys-[eth1/1].json", headers=cabecera,
+                             cookies=galletin, verify=False)
+    return interface.json()
+
+
+print(obtener_token())
+print(consulta_api())
+print(crear_tenant())
+print(interfaces())
